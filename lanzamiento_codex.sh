@@ -1,41 +1,48 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Iniciando NOVAIA GRID ULTRA en entorno Codex..."
+echo "🚀 Iniciando NOVAIA GRID ULTRA..."
 
-# Verifica estructura esperada
-if [ ! -d "./bot" ] || [ ! -d "./web" ]; then
-  echo "❌ Error: faltan las carpetas 'bot' o 'web'."
-  exit 1
-fi
+# 🔹 Validar estructura
+if [ ! -d "./bot" ]; then echo "❌ Falta carpeta 'bot'"; exit 1; fi
+if [ ! -d "./web" ]; then echo "❌ Falta carpeta 'web'"; exit 1; fi
 
-# BACKEND (Flask)
-echo "📦 Preparando entorno para el BOT (backend)..."
+# ========================
+# ⚙️ 1. BACKEND - FASTAPI
+# ========================
+echo "📦 Backend: Instalando entorno virtual..."
+
 cd bot
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt || { echo "❌ Fallo al instalar requirements.txt"; exit 1; }
-playwright install --with-deps || true
+pip install -r requirements.txt || { echo "❌ Error instalando dependencias"; exit 1; }
 
-# Lanza el backend
-echo "🧠 Ejecutando API del BOT..."
-nohup uvicorn main:app --host 0.0.0.0 --port 3001 --reload > ../log_backend.txt 2>&1 &
+echo "🔥 Backend: Ejecutando API en segundo plano..."
+nohup uvicorn main:app --host 0.0.0.0 --port 3001 > ../log_backend.txt 2>&1 &
 
-# FRONTEND (React/Next.js)
-echo "🌐 Preparando interfaz WEB..."
-cd ../web
+cd ..
+
+# ========================
+# 🌐 2. FRONTEND - REACT
+# ========================
+echo "📦 Frontend: Preparando interfaz..."
+
+cd web
 if command -v pnpm &> /dev/null; then
   pnpm install || pnpm install --force
-  pnpm run dev &
+  pnpm run dev -- --port 5000 > ../log_frontend.txt 2>&1 &
 else
   npm install --force
-  npm run dev &
+  npm run dev -- --port 5000 > ../log_frontend.txt 2>&1 &
 fi
 
-echo "✅ Sistema NOVAIA GRID ULTRA en ejecución."
-echo "📍 Backend: http://localhost:3001"
-echo "📍 Frontend: http://localhost:5000"
+cd ..
 
-# Fin limpio
-wait
+# ========================
+# ✅ FIN DEL PROCESO
+# ========================
+echo "✅ NOVAIA GRID ULTRA EN EJECUCIÓN"
+echo "📍 API Backend: http://localhost:3001"
+echo "📍 Interfaz Web: http://localhost:5000"
+echo "📜 Logs: log_backend.txt / log_frontend.txt"
