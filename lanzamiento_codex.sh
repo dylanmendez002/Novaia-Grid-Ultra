@@ -1,48 +1,30 @@
 #!/bin/bash
 set -e
+set -x
 
-echo "🚀 Iniciando NOVAIA GRID ULTRA..."
+# Ir al backend
+cd bot || exit 1
 
-# 🔹 Validar estructura
-if [ ! -d "./bot" ]; then echo "❌ Falta carpeta 'bot'"; exit 1; fi
-if [ ! -d "./web" ]; then echo "❌ Falta carpeta 'web'"; exit 1; fi
-
-# ========================
-# ⚙️ 1. BACKEND - FASTAPI
-# ========================
-echo "📦 Backend: Instalando entorno virtual..."
-
-cd bot
+# Crear y activar entorno virtual
 python3 -m venv .venv
 source .venv/bin/activate
+
+# Instalar dependencias
 pip install --upgrade pip
-pip install -r requirements.txt || { echo "❌ Error instalando dependencias"; exit 1; }
+pip install -r requirements.txt || exit 1
+playwright install --with-deps || exit 1
 
-echo "🔥 Backend: Ejecutando API en segundo plano..."
-nohup uvicorn main:app --host 0.0.0.0 --port 3001 > ../log_backend.txt 2>&1 &
+# Lanzar backend en segundo plano
+nohup uvicorn main:app --host 0.0.0.0 --port 3001 &
 
-cd ..
+# Ir al frontend
+cd ../web || exit 1
 
-# ========================
-# 🌐 2. FRONTEND - REACT
-# ========================
-echo "📦 Frontend: Preparando interfaz..."
-
-cd web
+# Instalar y lanzar frontend
 if command -v pnpm &> /dev/null; then
-  pnpm install || pnpm install --force
-  pnpm run dev -- --port 5000 > ../log_frontend.txt 2>&1 &
+    pnpm install --force
+    pnpm run dev -- --port 5000
 else
-  npm install --force
-  npm run dev -- --port 5000 > ../log_frontend.txt 2>&1 &
+    npm install --force
+    npm run dev -- --port 5000
 fi
-
-cd ..
-
-# ========================
-# ✅ FIN DEL PROCESO
-# ========================
-echo "✅ NOVAIA GRID ULTRA EN EJECUCIÓN"
-echo "📍 API Backend: http://localhost:3001"
-echo "📍 Interfaz Web: http://localhost:5000"
-echo "📜 Logs: log_backend.txt / log_frontend.txt"
